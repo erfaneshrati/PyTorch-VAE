@@ -9,7 +9,9 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from torchvision.datasets import CelebA
 import zipfile
-
+import pandas as pd
+from sklearn.model_selection import train_test_split
+import numpy as np
 
 # Add your custom dataset class here
 class MyDataset(Dataset):
@@ -22,6 +24,29 @@ class MyDataset(Dataset):
     
     def __getitem__(self, idx):
         pass
+
+
+class NumeraiDataset(Dataset):
+    def __init__(self, data_path, split='train'):
+        df = pd.read_parquet(data_path)
+        feature_cols = [c for c in df if c.startswith("feature_")]
+        X_train, X_test, y_train, y_test = train_test_split(df[feature_cols].to_numpy(), df['target'].to_numpy(), test_size=0.15, random_state=42)
+        if split=='train':
+            self.X = X_train
+            self.y = y_train[:, np.newaxis]
+        else:
+            self.X = X_test
+            self.y = y_test[:, np.newaxis]
+        self.X = torch.from_numpy(self.X)
+        self.y = torch.from_numpy(self.y)
+        print (self.X.shape)
+        print (self.y.shape)
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
 
 
 class MyCelebA(CelebA):
@@ -126,32 +151,37 @@ class VAEDataset(LightningDataModule):
         
 #       =========================  CelebA Dataset  =========================
     
-        train_transforms = transforms.Compose([transforms.RandomHorizontalFlip(),
-                                              transforms.CenterCrop(148),
-                                              transforms.Resize(self.patch_size),
-                                              transforms.ToTensor(),])
+#        train_transforms = transforms.Compose([transforms.RandomHorizontalFlip(),
+#                                              transforms.CenterCrop(148),
+#                                              transforms.Resize(self.patch_size),
+#                                              transforms.ToTensor(),])
         
-        val_transforms = transforms.Compose([transforms.RandomHorizontalFlip(),
-                                            transforms.CenterCrop(148),
-                                            transforms.Resize(self.patch_size),
-                                            transforms.ToTensor(),])
-        
-        self.train_dataset = MyCelebA(
-            self.data_dir,
-            split='train',
-            transform=train_transforms,
-            download=False,
-        )
+#        val_transforms = transforms.Compose([transforms.RandomHorizontalFlip(),
+#                                            transforms.CenterCrop(148),
+#                                            transforms.Resize(self.patch_size),
+#                                            transforms.ToTensor(),])
+
+#        self.train_dataset = MyCelebA(
+#            self.data_dir,
+#            split='train',
+#            transform=train_transforms,
+#            download=False,
+#        )
         
         # Replace CelebA with your dataset
-        self.val_dataset = MyCelebA(
-            self.data_dir,
-            split='test',
-            transform=val_transforms,
-            download=False,
-        )
+#        self.val_dataset = MyCelebA(
+#            self.data_dir,
+#            split='test',
+#            transform=val_transforms,
+#            download=False,
+#        )
+
+#       =========================  Numerai Dataset  =========================
+    
+        self.train_dataset = NumeraiDataset(data_path=self.data_dir, split='train')
+        self.val_dataset = NumeraiDataset(data_path=self.data_dir, split='test')
 #       ===============================================================
-        
+
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train_dataset,
