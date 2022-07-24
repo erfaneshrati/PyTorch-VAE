@@ -5,7 +5,7 @@ model_params:
 
 
 data_params:
-  data_path: "/home/erfan/missions/numerai/train.parquet"
+  data_path: "./../numerai/train.parquet"
   train_batch_size: 4096
   val_batch_size:  4096
   num_workers: 8
